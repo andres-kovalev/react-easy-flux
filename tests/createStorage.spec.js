@@ -57,6 +57,32 @@ describe('createStorage', () => {
         expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
     });
 
+    describe('useStorage()', () => {
+        it('shouldn\'t cause component re-render when state didn\'t changed', () => {
+            const { Provider, useStorage } = createStorage(identity);
+            const Consumer = jest.fn(() => {
+                const [ , dispatch ] = useStorage();
+                const onClick = () => dispatch({});
+
+                return (
+                    <button onClick={ onClick } />
+                );
+            });
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+        });
+    });
+
     it('should return useActionCreators() hook bind action creators to dispatch', () => {
         const reducer = jest.fn();
         const action = { type: 'ACTION_TYPE' };
@@ -99,6 +125,36 @@ describe('createStorage', () => {
             const div = wrapper.find('div');
 
             expect(div).toHaveLength(1);
+        });
+
+        it('shouldn\'t cause component re-render when storage updated', () => {
+            let state = 0;
+            const reducer = () => {
+                state += 1;
+
+                return state;
+            };
+
+            const { Provider, useActionCreators } = createStorage(reducer);
+            const Consumer = jest.fn(() => {
+                const { update } = useActionCreators({ update: () => {} });
+
+                return (
+                    <button onClick={ update } />
+                );
+            });
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
         });
     });
 });
