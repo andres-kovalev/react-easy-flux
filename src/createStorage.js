@@ -2,6 +2,8 @@ const React = require('react');
 const PropTypes = require('prop-types');
 const EventEmitter = require('events');
 
+const { strictEqual } = require('./equalityFunctions');
+
 const { createContext, useContext, useReducer, useRef, useCallback, useMemo, useEffect } = React;
 
 const providerPropTypes = {
@@ -11,6 +13,7 @@ const providerPropTypes = {
 };
 
 const createEventEmitter = () => new EventEmitter();
+const identity = value => value;
 
 module.exports = (reducer) => {
     const StorageContext = createContext();
@@ -47,13 +50,38 @@ module.exports = (reducer) => {
     };
     Provider.propTypes = providerPropTypes;
 
-    const useStorage = () => {
+    const useSelector = (selector = identity, equalityFunction = strictEqual) => {
+        const { current: stored } = useRef({});
         const { subscribe, getState, dispatch } = useContext(StorageContext);
         const [ , update ] = useReducer(value => value + 1, 0);
-        useEffect(() => subscribe(update), []);
 
-        return [ getState(), dispatch ];
+        const state = getState();
+        if (stored.selector !== selector || stored.state !== state) {
+            Object.assign(stored, { state, selector, selected: selector(state) });
+        }
+        const check = () => {
+            const newState = getState();
+
+            if (state === newState) {
+                return;
+            }
+
+            const newSelected = selector(newState);
+
+            if (equalityFunction(stored.selected, newSelected)) {
+                return;
+            }
+
+            Object.assign(stored, { state: newState, selected: newSelected });
+
+            update();
+        };
+        useEffect(() => subscribe(check), []);
+
+        return [ stored.selected, dispatch ];
     };
+
+    const useStorage = equalityFunction => useSelector(undefined, equalityFunction);
 
     const useActionCreators = (actionCreatorsMap = {}) => {
         const { dispatch } = useContext(StorageContext);
@@ -72,6 +100,7 @@ module.exports = (reducer) => {
     return {
         Provider,
         useStorage,
+        useSelector,
         useActionCreators
     };
 };

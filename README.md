@@ -49,7 +49,7 @@ render(
 );
 ```
 
-### useStorage() / useActionCreators()
+### useStorage(equalityFunction) / useActionCreators(actionCreatorsMap)
 
 To consume/interact with storage state component should use `useStorage()` hook. It returns array of two elements: current state and `dispatch()` function to dispatch actions.
 
@@ -74,6 +74,41 @@ const ThemeSelector = ({ ... }) => {
 }
 ```
 
+To optimize rendering `useStorage()` hook consumes equality function as an optional argument. This function will be called to check whether state changes are significant enough to re-render component.
+
+```js
+...
+  if (equalityFunction(oldState, newState)) {
+      return;
+  }
+
+  // re-render component
+```
+
+By default strict equality used as equality function (`strictEqual` function imported by package), but user is always able to pass something custom:
+
+```js
+const MyComponent = () => {
+    const [ state, dispatch ] = useStorage(
+        (oldState, newState) => oldState.title === newState.title
+    );
+
+    // such component will be re-rendered only on title change
+}
+```
+
+In most cases `shallowEqual` function is most convenient and simple way to optimize rendering rendering. It works similar to react `memo`/`PureComponent`.
+
+```js
+import { shallowEqual } from 'react-easy-flux';
+
+const MyComponent = () => {
+    const [ state, dispatch ] = useStorage(shallowEqual);
+
+    // will be re-rendering only when something actually changed
+}
+```
+
 To bind action creators `useActionCreators()` hook can be used.
 
 ```js
@@ -88,3 +123,42 @@ const ThemeSelector = ({ ... }) => {
 
     ...
 }
+```
+
+### useSelector(selector, equalityFunction)
+
+Usually we can hold different data in separate stores, but for some reason you may want to have single storage for everything (like redux way). For instance, it's much easier to use single `useStorage()` hook for everything than maintain separate `useThemeStorage()`, `useLocaleStorage()` and so on. Here `useSelector()` comes to help. User just need to provide selector function to select only needed data. Like `useStorage()` hook it returns selected part of state and dispatch function.
+```js
+const MyComponent = () => {
+    const [ title, dispatch ] = useSelector(
+        ({ data }) => data.title
+    );
+}
+```
+
+`useSelector()` optimizes rendering by checking selected value and re-render component only when its value changed. To optimize more complex selectors equality function can be passed as a second optional argument:
+
+```js
+import { shallowEqual } from 'react-easy-flux';
+
+const MyComponent = () => {
+    const [ { locale, theme } ] = useSelector(
+        ({ locale, theme }) => ({ locale, theme }),
+        shallowEqual
+    );
+}
+```
+
+Of course the same effect can be acheived with `useStorage()`, but in a bit more tricky way:
+
+```js
+const MyComponent = () => {
+    const [ { locale, theme } ] = useStorage(
+        ({ locale, theme }) => ({ locale, theme }),
+        (oldState, newState) => oldState.locale === newState.locale
+            && oldState.theme === newState.theme
+    );
+}
+```
+
+I guess first option looks better.
