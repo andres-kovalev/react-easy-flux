@@ -16,7 +16,7 @@ Easy and fast react binding for flux.
 
 # API
 
-## createStorage(reducer)
+## createStorage(reducer, middlewares)
 
 `createStorage` function creates new storage attributes such as `Provider`, `useStorage` and `useActionCreators` hooks. You can crete several storages for different kinds of data or use single storage (redux-like-way).
 
@@ -162,3 +162,22 @@ const MyComponent = () => {
 ```
 
 I guess first option looks better.
+
+## Middlewares
+
+`react-easy-flux` supports middlewares similar to [redux middlewares](https://redux.js.org/advanced/middleware), so you can use any redux-compatible ones.
+
+```js
+import thunkMiddleware from 'redux-thunk';
+
+const logMiddleware = store => next => action => {
+    console.log(action);
+
+    next(action);
+}
+
+const {
+    Provider,
+    useStorage
+} = createStorage(reducer, [ thunkMiddleware, logMiddleware ])
+```

@@ -15,7 +15,7 @@ const providerPropTypes = {
 const createEventEmitter = () => new EventEmitter();
 const identity = value => value;
 
-module.exports = (reducer) => {
+module.exports = (reducer, middlewares = []) => {
     const StorageContext = createContext();
 
     const Provider = ({ state: initialState, children }) => {
@@ -29,7 +29,7 @@ module.exports = (reducer) => {
             return () => events.off('change', listener);
         }, [ events ]);
 
-        const dispatch = useCallback((action) => {
+        const dispatchMiddleware = useCallback((action) => {
             const oldState = getState();
             const newState = reducer(oldState, action);
 
@@ -39,12 +39,20 @@ module.exports = (reducer) => {
                 events.emit('change');
             }
         }, [ events, getState ]);
+        let combinedMiddleware;
+        const dispatch = action => combinedMiddleware(action);
 
         const store = {
             getState,
             subscribe,
             dispatch
         };
+
+        combinedMiddleware = middlewares
+            .reduceRight(
+                (reduced, middleware) => middleware(store)(reduced),
+                dispatchMiddleware
+            );
 
         return React.createElement(StorageContext.Provider, { value: store }, children);
     };
@@ -88,12 +96,9 @@ module.exports = (reducer) => {
 
         return Object.entries(actionCreatorsMap)
             .reduce(
-                (reduced, [ key, actionCreator ]) => {
-                    // eslint-disable-next-line no-param-reassign
-                    reduced[key] = payload => dispatch(actionCreator(payload));
-
-                    return reduced;
-                }, {}
+                (reduced, [ key, actionCreator ]) => Object.assign(reduced, {
+                    [key]: payload => dispatch(actionCreator(payload))
+                }), {}
             );
     };
 

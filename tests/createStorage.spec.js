@@ -57,6 +57,36 @@ describe('createStorage', () => {
         expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
     });
 
+    it('should run middlewares when provided', () => {
+        const reducer = jest.fn();
+        const exampleAction = { type: 'ACTION_TYPE' };
+        const middlewareSpy = jest.fn();
+        const middleware = () => next => (action) => {
+            middlewareSpy(action);
+
+            next(action);
+        };
+
+        const { Provider, useStorage } = createStorage(reducer, [ middleware ]);
+        const Consumer = () => {
+            const [ , dispatch ] = useStorage();
+            const onClick = () => dispatch(exampleAction);
+
+            return (
+                <button onClick={ onClick } />
+            );
+        };
+        const wrapper = mount(
+            <Provider state={ 0 }>
+                <Consumer />
+            </Provider>
+        );
+        const button = wrapper.find('button');
+        button.simulate('click');
+
+        expect(middlewareSpy).toHaveBeenCalledWith(exampleAction);
+    });
+
     describe('useStorage()', () => {
         it('shouldn\'t cause component re-render when state didn\'t changed', () => {
             const { Provider, useStorage } = createStorage(identity);
@@ -198,7 +228,7 @@ describe('createStorage', () => {
         expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
     });
 
-    describe('useActionCreators', () => {
+    describe('useActionCreators()', () => {
         it('shouldn\'t throw an error even when called without arguments', () => {
             const { Provider, useActionCreators } = createStorage(identity);
             const Consumer = () => {
