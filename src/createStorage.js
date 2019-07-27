@@ -91,19 +91,32 @@ module.exports = (reducer, middlewares = []) => {
 
     const useStorage = equalityFunction => useSelector(undefined, equalityFunction);
 
+    const bindActionCreators = dispatch => (actionCreatorsMap = {}) => Object
+        .entries(actionCreatorsMap)
+        .reduce(
+            (reduced, [ key, actionCreator ]) => Object.assign(reduced, {
+                [key]: payload => dispatch(actionCreator(payload))
+            }), {}
+        );
+
     const useActionCreators = (actionCreatorsMap = {}) => {
         const { dispatch } = useContext(StorageContext);
 
-        return Object.entries(actionCreatorsMap)
-            .reduce(
-                (reduced, [ key, actionCreator ]) => Object.assign(reduced, {
-                    [key]: payload => dispatch(actionCreator(payload))
-                }), {}
-            );
+        return bindActionCreators(dispatch)(actionCreatorsMap);
+    };
+
+    const Consumer = ({ selector, equalityFunction, actionCreators, children: renderProp }) => {
+        const [ selected, dispatch ] = useSelector(selector, equalityFunction);
+        const actions = actionCreators
+            ? bindActionCreators(dispatch)(actionCreators)
+            : dispatch;
+
+        return renderProp(selected, actions);
     };
 
     return {
         Provider,
+        Consumer,
         useStorage,
         useSelector,
         useActionCreators
