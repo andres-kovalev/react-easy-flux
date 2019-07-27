@@ -163,6 +163,73 @@ const MyComponent = () => {
 
 I guess first option looks better.
 
+### Consumer
+
+Hooks can be used only in functional components. To gain the same functionality in your class component use Consumer component. By default it runs render prop with two arguments: state value and dispatch() function:
+
+```js
+const { Provider, Consumer } = createStorage(reducer);
+
+...
+
+class MyComponent extends React.Component {
+    render() {
+        return (
+            <Consumer>
+                {this.renderComponent}
+            </Consumer>
+        );
+    }
+
+    renderComponent(state, dispatch) {
+        // ...
+    }
+}
+```
+
+We can pass selector and equality function to Consumer component to have the same features, as when we're using useSelector() hook:
+
+```js
+import { shallowEqual } from 'react-easy-flux';
+
+class MyComponent extends React.Component {
+    render() {
+        return (
+            <Consumer
+                selector={ state => state.value1 }
+                equalityFunction={ shallowEqual }
+            >
+                {this.renderComponent}
+            </Consumerselector={>
+        )
+    }
+
+    renderComponent(state, dispatch) {
+        // ...
+    }
+}
+```
+
+We can also pass action creators map using actionCreators prop to get bound action creators map instead of dispatch function:
+
+```js
+import * as ACTIONS from './actions/counter';
+
+class Counter extends React.Component {
+    render() {
+        return (
+            <Consumer actionCreators={ ACTIONS }>
+                {this.renderComponent}
+            </Consumer>
+        );
+    }
+
+    renderComponent(state, { increment, decrement }) {
+        // ...
+    }
+}
+```
+
 ## Middlewares
 
 `react-easy-flux` supports middlewares similar to [redux middlewares](https://redux.js.org/advanced/middleware), so you can use any redux-compatible ones.
