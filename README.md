@@ -14,6 +14,20 @@ Easy and fast react binding for flux.
 
 `react-easy-flux` implements [flux](https://facebook.github.io/flux/) architecture to help managing global application state with unidirectional data flow. It uses well known attributes of flux pattern, such as `reducers` and `actions` (`action creators`).
 
+# Installation
+
+As any other npm package `react-easy-flux` can be added to your project by following command:
+
+```bash
+npm i -S react-easy-flux
+```
+
+It requires any version of [react](https://www.npmjs.com/package/react) with new context API support as peer dependency, so it should be installed as well.
+
+```bash
+npm i -S react
+```
+
 # API
 
 ## createStorage(reducer, middlewares)
