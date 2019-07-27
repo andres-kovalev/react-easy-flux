@@ -29,30 +29,33 @@ module.exports = (reducer, middlewares = []) => {
             return () => events.off('change', listener);
         }, [ events ]);
 
-        const dispatchMiddleware = useCallback((action) => {
-            const oldState = getState();
-            const newState = reducer(oldState, action);
+        const store = useMemo(() => {
+            const dispatchMiddleware = (action) => {
+                const oldState = getState();
+                const newState = reducer(oldState, action);
 
-            if (newState !== oldState) {
-                state.current = newState;
+                if (newState !== oldState) {
+                    state.current = newState;
 
-                events.emit('change');
-            }
+                    events.emit('change');
+                }
+            };
+            let dispatch;
+
+            const storage = {
+                getState,
+                subscribe,
+                dispatch: action => dispatch(action)
+            };
+
+            dispatch = middlewares
+                .reduceRight(
+                    (reduced, middleware) => middleware(storage)(reduced),
+                    dispatchMiddleware
+                );
+
+            return storage;
         }, [ events, getState ]);
-        let combinedMiddleware;
-        const dispatch = action => combinedMiddleware(action);
-
-        const store = {
-            getState,
-            subscribe,
-            dispatch
-        };
-
-        combinedMiddleware = middlewares
-            .reduceRight(
-                (reduced, middleware) => middleware(store)(reduced),
-                dispatchMiddleware
-            );
 
         return React.createElement(StorageContext.Provider, { value: store }, children);
     };
