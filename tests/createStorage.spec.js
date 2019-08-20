@@ -7,7 +7,7 @@ const createStorage = require('../src/createStorage');
 const identity = value => value;
 
 describe('createStorage', () => {
-    it.each([ 'Provider', 'Consumer', 'useStorage', 'useSelector', 'useActionCreators' ])('should return %s', (field) => {
+    it.each([ 'Provider', 'Consumer', 'useStorage', 'useActionCreators' ])('should return %s', (field) => {
         const result = createStorage(identity);
 
         expect(result).toHaveProperty(field);
@@ -17,7 +17,6 @@ describe('createStorage', () => {
         it('should return storage value', () => {
             const state = 'state-value';
             const { Provider, useStorage } = createStorage(identity);
-
             const Consumer = () => {
                 const [ value ] = useStorage();
 
@@ -25,6 +24,7 @@ describe('createStorage', () => {
                     <div>{ value }</div>
                 );
             };
+
             const wrapper = mount(
                 <Provider state={ state }>
                     <Consumer />
@@ -35,10 +35,33 @@ describe('createStorage', () => {
             expect(div.text()).toBe(state);
         });
 
+        it('should return selected part of storage value when selector provided', () => {
+            const value1 = 'value-1';
+            const value2 = 'value-2';
+            const { Provider, useStorage } = createStorage(identity);
+            const Consumer = () => {
+                const [ value ] = useStorage(
+                    state => state.value1
+                );
+
+                return (
+                    <div>{ value }</div>
+                );
+            };
+
+            const wrapper = mount(
+                <Provider state={{ value1, value2 }}>
+                    <Consumer />
+                </Provider>
+            );
+            const div = wrapper.find('div');
+
+            expect(div.text()).toBe(value1);
+        });
+
         it('should return storage dispatch() function', () => {
             const reducer = jest.fn();
             const action = { type: 'ACTION_TYPE' };
-
             const { Provider, useStorage } = createStorage(reducer);
             const Consumer = () => {
                 const [ , dispatch ] = useStorage();
@@ -48,6 +71,7 @@ describe('createStorage', () => {
                     <button onClick={ onClick } />
                 );
             };
+
             const wrapper = mount(
                 <Provider state={ 0 }>
                     <Consumer />
@@ -93,66 +117,8 @@ describe('createStorage', () => {
             const { Provider, useStorage } = createStorage(reducer);
             const Consumer = jest.fn(() => {
                 const [ , dispatch ] = useStorage(
+                    identity,
                     (oldState, newState) => oldState.value2 === newState.value2
-                );
-                const onClick = () => dispatch({});
-
-                return (
-                    <button onClick={ onClick } />
-                );
-            });
-            const wrapper = mount(
-                <Provider state={ reducer() }>
-                    <Consumer />
-                </Provider>
-            );
-
-            expect(Consumer).toHaveBeenCalledTimes(1);
-
-            const button = wrapper.find('button');
-            button.simulate('click');
-
-            expect(Consumer).toHaveBeenCalledTimes(1);
-        });
-    });
-
-    describe('useSelector()', () => {
-        it('should return selected part of storage value', () => {
-            const value1 = 'value-1';
-            const value2 = 'value-2';
-            const { Provider, useSelector } = createStorage(identity);
-
-            const Consumer = () => {
-                const [ value ] = useSelector(
-                    state => state.value1
-                );
-
-                return (
-                    <div>{ value }</div>
-                );
-            };
-            const wrapper = mount(
-                <Provider state={{ value1, value2 }}>
-                    <Consumer />
-                </Provider>
-            );
-            const div = wrapper.find('div');
-
-            expect(div.text()).toBe(value1);
-        });
-
-        it('should use equality function to check state changes when provided', () => {
-            let value = 0;
-            const reducer = () => {
-                value += 1;
-
-                return value;
-            };
-            const { Provider, useSelector } = createStorage(reducer);
-            const Consumer = jest.fn(() => {
-                const [ , dispatch ] = useSelector(
-                    state => ({ state, value: 0 }),
-                    (oldState, newState) => oldState.value === newState.value
                 );
                 const onClick = () => dispatch({});
 
