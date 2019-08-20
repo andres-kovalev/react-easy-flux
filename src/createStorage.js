@@ -61,7 +61,7 @@ module.exports = (reducer, middlewares = []) => {
     };
     Provider.propTypes = providerPropTypes;
 
-    const useSelector = (selector = identity, equalityFunction = strictEqual) => {
+    const useStorage = (selector = identity, equalityFunction = strictEqual) => {
         const { current: stored } = useRef({});
         const { subscribe, getState, dispatch } = useContext(StorageContext);
         const [ , update ] = useReducer(value => value + 1, 0);
@@ -92,8 +92,6 @@ module.exports = (reducer, middlewares = []) => {
         return [ stored.selected, dispatch ];
     };
 
-    const useStorage = equalityFunction => useSelector(undefined, equalityFunction);
-
     const bindActionCreators = dispatch => (actionCreatorsMap = {}) => Object
         .entries(actionCreatorsMap)
         .reduce(
@@ -109,7 +107,7 @@ module.exports = (reducer, middlewares = []) => {
     };
 
     const Consumer = ({ selector, equalityFunction, actionCreators, children: renderProp }) => {
-        const [ selected, dispatch ] = useSelector(selector, equalityFunction);
+        const [ selected, dispatch ] = useStorage(selector, equalityFunction);
         const actions = actionCreators
             ? bindActionCreators(dispatch)(actionCreators)
             : dispatch;
@@ -121,7 +119,6 @@ module.exports = (reducer, middlewares = []) => {
         Provider,
         Consumer,
         useStorage,
-        useSelector,
         useActionCreators
     };
 };
