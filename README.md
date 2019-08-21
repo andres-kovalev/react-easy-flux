@@ -63,7 +63,7 @@ render(
 );
 ```
 
-### useStorage(equalityFunction) / useActionCreators(actionCreatorsMap)
+### useStorage(selector, equalityFunction)
 
 To consume/interact with storage state component should use `useStorage()` hook. It returns array of two elements: current state and `dispatch()` function to dispatch actions.
 
@@ -88,7 +88,17 @@ const ThemeSelector = ({ ... }) => {
 }
 ```
 
-To optimize rendering `useStorage()` hook consumes equality function as an optional argument. This function will be called to check whether state changes are significant enough to re-render component.
+Usually we can hold different data in separate stores, but for some reason you may want to have single storage for everything (like redux way). For instance, it's much easier to use single `useStorage()` hook for everything than maintain separate `useThemeStorage()`, `useLocaleStorage()` and so on. Here selectors comes to help. We just need to provide selector function to select only needed data.
+
+```js
+const MyComponent = () => {
+    const [ title, dispatch ] = useStorage(
+        ({ data }) => data.title
+    );
+}
+```
+
+To optimize rendering `useStorage()` hook consumes equality function as second optional argument. This function will be called to check whether state changes are significant enough to re-render component.
 
 ```js
 ...
@@ -123,126 +133,36 @@ const MyComponent = () => {
 }
 ```
 
-To bind action creators `useActionCreators()` hook can be used.
+### useActionCreators(actionCreatorsMap)
+
+There might be a situation, when some component does not consumes state, but updates it. To prevent unnecessary updates for this components we can specify empty selector:
 
 ```js
-import { setTheme } from './themeActions.js';
+const ChatInput = () => {
+    const [ , dispatch ] = useStorage(() => 0);
 
-const ThemeSelector = ({ ... }) => {
-    // const [ , dipatch ] = useTheme();
-    // const onSelect = theme => dispatch(
-    //    setTheme(theme)
-    // );
-    const { setTheme: onSelect } = useActionCreators({ setTheme })
+    const sendMessage = message => dispatch(send(message));
 
     ...
 }
 ```
 
-### useSelector(selector, equalityFunction)
+But it's easier to use another hook called `useActionCreators()`. This hook is used to bind action creators and not consumes state:
 
-Usually we can hold different data in separate stores, but for some reason you may want to have single storage for everything (like redux way). For instance, it's much easier to use single `useStorage()` hook for everything than maintain separate `useThemeStorage()`, `useLocaleStorage()` and so on. Here `useSelector()` comes to help. User just need to provide selector function to select only needed data. Like `useStorage()` hook it returns selected part of state and dispatch function.
 ```js
-const MyComponent = () => {
-    const [ title, dispatch ] = useSelector(
-        ({ data }) => data.title
-    );
+import { setTheme } from './themeActions.js';
+
+const ChatInput = ({ ... }) => {
+    // const [ , dispatch ] = useStorage(() => 0);
+
+    // const sendMessage = message => dispatch(send(message));
+    const { send: sendMessage } = useActionCreators({ send })
+
+    ...
 }
 ```
 
-`useSelector()` optimizes rendering by checking selected value and re-render component only when its value changed. To optimize more complex selectors equality function can be passed as a second optional argument:
-
-```js
-import { shallowEqual } from 'react-easy-flux';
-
-const MyComponent = () => {
-    const [ { locale, theme } ] = useSelector(
-        ({ locale, theme }) => ({ locale, theme }),
-        shallowEqual
-    );
-}
-```
-
-Of course the same effect can be acheived with `useStorage()`, but in a bit more tricky way:
-
-```js
-const MyComponent = () => {
-    const [ { locale, theme } ] = useStorage(
-        ({ locale, theme }) => ({ locale, theme }),
-        (oldState, newState) => oldState.locale === newState.locale
-            && oldState.theme === newState.theme
-    );
-}
-```
-
-I guess first option looks better.
-
-### Consumer
-
-Hooks can be used only in functional components. To gain the same functionality in your class component use Consumer component. By default it runs render prop with two arguments: state value and dispatch() function:
-
-```js
-const { Provider, Consumer } = createStorage(reducer);
-
-...
-
-class MyComponent extends React.Component {
-    render() {
-        return (
-            <Consumer>
-                {this.renderComponent}
-            </Consumer>
-        );
-    }
-
-    renderComponent(state, dispatch) {
-        // ...
-    }
-}
-```
-
-We can pass selector and equality function to Consumer component to have the same features, as when we're using useSelector() hook:
-
-```js
-import { shallowEqual } from 'react-easy-flux';
-
-class MyComponent extends React.Component {
-    render() {
-        return (
-            <Consumer
-                selector={ state => state.value1 }
-                equalityFunction={ shallowEqual }
-            >
-                {this.renderComponent}
-            </Consumerselector={>
-        )
-    }
-
-    renderComponent(state, dispatch) {
-        // ...
-    }
-}
-```
-
-We can also pass action creators map using actionCreators prop to get bound action creators map instead of dispatch function:
-
-```js
-import * as ACTIONS from './actions/counter';
-
-class Counter extends React.Component {
-    render() {
-        return (
-            <Consumer actionCreators={ ACTIONS }>
-                {this.renderComponent}
-            </Consumer>
-        );
-    }
-
-    renderComponent(state, { increment, decrement }) {
-        // ...
-    }
-}
-```
+Such component won't be updated on state change.
 
 ## Middlewares
 
