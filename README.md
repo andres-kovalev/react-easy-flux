@@ -262,3 +262,56 @@ const {
     useStorage
 } = createStorage(reducer, [ thunkMiddleware, logMiddleware ])
 ```
+
+## combineReducer(sreducerMap)
+
+Starting from `react-easy-flux@1.5.0` we're able to use `combineReducers()` helper function. It compiles map of reducers into a single reducer function.
+
+```js
+const reducer = combineReducers({
+    theme: themeReducer,
+    locale: localeReducer
+});
+
+const newState = reducer(oldState, action);
+/*
+const newState = {
+    theme: themeReducer(oldState.theme, action),
+    locale: localeReducer(oldState.locale, action)
+}
+*/
+```
+
+`combineReducers()` have 2 important features:
+
+* it supports reducer maps with any deep
+```js
+const reducer = combineReducers({
+    locale: localeReducer,
+    theme: {
+        colorSheme: colorShemeReducer,
+        contrast: contrastReducer
+    }
+});
+/*
+const reducer = combineReducers({
+    locale: localeReducer,
+    theme: combineReducers({
+        colorSheme: colorShemeReducer,
+        contrast: contrastReducer
+    })
+});
+*/
+```
+* it keeps refs when possible
+```js
+const identity = value => value;
+const reducer = combineReducers({
+    value1: identity,
+    value2: identity
+});
+const oldState = { value1: 1, value2: 2 };
+const newValue = reducer(oldState, {});
+
+oldState === newState; // true
+```

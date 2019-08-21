@@ -3,6 +3,7 @@ const PropTypes = require('prop-types');
 const EventEmitter = require('events');
 
 const { strictEqual } = require('./equalityFunctions');
+const { identity } = require('./helper');
 
 const { createContext, useContext, useReducer, useRef, useCallback, useMemo, useEffect } = React;
 
@@ -13,7 +14,6 @@ const providerPropTypes = {
 };
 
 const createEventEmitter = () => new EventEmitter();
-const identity = value => value;
 
 module.exports = (reducer, middlewares = []) => {
     const StorageContext = createContext();
