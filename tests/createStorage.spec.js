@@ -1,4 +1,6 @@
 const React = require('react');
+
+const { useState } = React;
 const { mount } = require('enzyme');
 const { act } = require('react-dom/test-utils');
 
@@ -213,6 +215,37 @@ describe('createStorage', () => {
             button.simulate('click');
 
             expect(Consumer).toHaveBeenCalledTimes(1);
+        });
+
+        it('should memoize bound action creators', () => {
+            const { Provider, useActionCreators } = createStorage(identity);
+            const ACTIONS = {
+                action1: () => {},
+                action2: () => {}
+            };
+
+            const Child = () => <React.Fragment />;
+            const Consumer = () => {
+                const actions = useActionCreators(ACTIONS);
+                const [ , update ] = useState();
+
+                return (
+                    <Child { ...actions } update={ update } />
+                );
+            };
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+            const props1 = wrapper.find(Child).props();
+            act(() => {
+                props1.update(null);
+            });
+            wrapper.update();
+            const props2 = wrapper.find(Child).props();
+
+            expect(props1).toEqual(props2);
         });
     });
 

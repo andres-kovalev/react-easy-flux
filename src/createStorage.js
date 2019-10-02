@@ -15,6 +15,12 @@ const providerPropTypes = {
 
 const createEventEmitter = () => new EventEmitter();
 
+const byKey = ([ key1 ], [ key2 ]) => key1.localeCompare(key2);
+const takeValue = ([ , value ]) => value;
+const getObjectDeps = object => Object.entries(object)
+    .sort(byKey)
+    .map(takeValue);
+
 module.exports = (reducer, middlewares = []) => {
     const StorageContext = createContext();
 
@@ -103,7 +109,10 @@ module.exports = (reducer, middlewares = []) => {
     const useActionCreators = (actionCreatorsMap = {}) => {
         const { dispatch } = useContext(StorageContext);
 
-        return bindActionCreators(dispatch)(actionCreatorsMap);
+        return useMemo(
+            () => bindActionCreators(dispatch)(actionCreatorsMap),
+            getObjectDeps(actionCreatorsMap)
+        );
     };
 
     const Consumer = ({ selector, equalityFunction, actionCreators, children: renderProp }) => {
