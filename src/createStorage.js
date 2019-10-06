@@ -9,7 +9,6 @@ const providerPropTypes = {
     children: PropTypes.node
 };
 
-
 module.exports = (reducer) => {
     const StorageContext = createContext();
 
