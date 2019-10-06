@@ -1,6 +1,6 @@
 {
     "name": "react-easy-flux",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "React binding for flux",
     "main": "index.js",
     "scripts": {
