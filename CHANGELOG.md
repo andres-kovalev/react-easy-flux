@@ -1,8 +1,6 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
-
-### [1.1.1](https://github.com/andres-kovalev/react-easy-flux/compare/v1.1.0...v1.1.1) (2019-10-06)
+All notable changes to this project will be documented in this file.
 
 ## 1.1.0 (2019-10-06)
 
