@@ -1,6 +1,6 @@
 {
     "name": "react-easy-flux",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "React binding for flux",
     "main": "index.js",
     "scripts": {
@@ -9,10 +9,9 @@
         "test": "jest",
         "cover:check": "jest --coverage",
         "codecov": "codecov -t $CODECOV_TOKEN",
-        "precommit": "npm run lint",
-        "prepush": "npm run lint && npm run cover:check",
         "precheck": "node ./tools/precheck.js",
-        "clean": "node ./tools/clean.js"
+        "clean": "node ./tools/clean.js",
+        "release": "standard-version -t"
     },
     "repository": {
         "type": "git",
@@ -38,25 +37,20 @@
         "react": "^16.8.0"
     },
     "devDependencies": {
+        "@babel/preset-react": "^7.0.0",
+        "babel-eslint": "^10.0.2",
         "codecov": "^3.2.0",
+        "enzyme": "^3.10.0",
+        "enzyme-adapter-react-16": "^1.14.0",
         "eslint": "^5.15.3",
         "eslint-config-airbnb": "^17.1.0",
         "eslint-plugin-import": "^2.16.0",
-        "husky": "^1.3.1",
-        "@babel/preset-react": "^7.0.0",
-        "babel-eslint": "^10.0.2",
-        "enzyme": "^3.10.0",
-        "enzyme-adapter-react-16": "^1.14.0",
         "eslint-plugin-jsx-a11y": "^6.2.3",
         "eslint-plugin-react": "^7.14.2",
+        "husky": "^1.3.1",
         "jest": "^24.8.0",
-        "react-dom": "^16.8.0"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "npm run precommit",
-            "pre-push": "npm run prepush"
-        }
+        "react-dom": "^16.8.0",
+        "standard-version": "^7.0.0"
     },
     "jest": {
         "collectCoverageFrom": [
@@ -77,5 +71,42 @@
     },
     "dependencies": {
         "prop-types": "^15.7.2"
+    },
+    "standard-version": {
+        "header": "Package changelog",
+        "types": [
+            {
+                "type": "feat",
+                "section": "Features"
+            },
+            {
+                "type": "fix",
+                "section": "Bug Fixes"
+            },
+            {
+                "type": "chore",
+                "hidden": true
+            },
+            {
+                "type": "docs",
+                "hidden": true
+            },
+            {
+                "type": "style",
+                "hidden": true
+            },
+            {
+                "type": "refactor",
+                "section": "Improvements"
+            },
+            {
+                "type": "perf",
+                "section": "Improvements"
+            },
+            {
+                "type": "test",
+                "hidden": true
+            }
+        ]
     }
 }
