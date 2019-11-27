@@ -164,6 +164,16 @@ const ChatInput = ({ ... }) => {
 
 Such component won't be updated on state change.
 
+`useActionCreators()` hook also supports attribute of array type. In some cases it can make things easier:
+
+```js
+const [ onClick ] = useActionCreators([ onClick ]);
+
+// instead of
+
+const { invoke: onClick } = useActionCreators({ invoke });
+```
+
 ## Middlewares
 
 `react-easy-flux` supports middlewares similar to [redux middlewares](https://redux.js.org/advanced/middleware), so you can use any redux-compatible ones.

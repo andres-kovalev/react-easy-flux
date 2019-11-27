@@ -21,6 +21,20 @@ const getObjectDeps = object => Object.entries(object)
     .sort(byKey)
     .map(takeValue);
 
+const bindActionCreator = dispatch => action => (...payload) => dispatch(action(...payload));
+
+const bindActionCreators = (dispatch) => {
+    const bind = bindActionCreator(dispatch);
+
+    return (actionCreatorsMap = {}) => Object
+        .entries(actionCreatorsMap)
+        .reduce(
+            (reduced, [ key, actionCreator ]) => Object.assign(reduced, {
+                [key]: bind(actionCreator)
+            }), {}
+        );
+};
+
 module.exports = (reducer, middlewares = []) => {
     const StorageContext = createContext();
 
@@ -100,21 +114,16 @@ module.exports = (reducer, middlewares = []) => {
         return [ stored.selected, dispatch ];
     };
 
-    const bindActionCreators = dispatch => (actionCreatorsMap = {}) => Object
-        .entries(actionCreatorsMap)
-        .reduce(
-            (reduced, [ key, actionCreator ]) => Object.assign(reduced, {
-                [key]: payload => dispatch(actionCreator(payload))
-            }), {}
-        );
-
-    const useActionCreators = (actionCreatorsMap = {}) => {
+    const useActionCreators = (actionCreators = {}) => {
         const { dispatch } = useContext(StorageContext);
 
-        return useMemo(
-            () => bindActionCreators(dispatch)(actionCreatorsMap),
-            getObjectDeps(actionCreatorsMap)
-        );
+        const isArray = Array.isArray(actionCreators);
+        const bind = isArray
+            ? () => actionCreators.map(bindActionCreator(dispatch))
+            : () => bindActionCreators(dispatch)(actionCreators);
+        const dependencies = isArray ? actionCreators : getObjectDeps(actionCreators);
+
+        return useMemo(bind, dependencies);
     };
 
     const Consumer = ({ selector, equalityFunction, actionCreators, children: renderProp }) => {
