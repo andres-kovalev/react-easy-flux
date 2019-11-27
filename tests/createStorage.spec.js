@@ -217,6 +217,30 @@ describe('createStorage', () => {
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
+        it('should return array of action creators bound to dispatch when array provided', () => {
+            const reducer = jest.fn();
+            const action = { type: 'ACTION_TYPE' };
+            const invoke = () => action;
+
+            const { Provider, useActionCreators } = createStorage(reducer);
+            const Consumer = () => {
+                const [ onClick ] = useActionCreators([ invoke ]);
+
+                return (
+                    <button onClick={ onClick } />
+                );
+            };
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
+        });
+
         it('shouldn\'t throw an error even when called without arguments', () => {
             const { Provider, useActionCreators } = createStorage(identity);
             const Consumer = () => {
