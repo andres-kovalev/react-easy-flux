@@ -1,12 +1,21 @@
 const React = require('react');
 
-const { useState } = React;
+const { useState, useRef } = React;
 const { mount } = require('enzyme');
 const { act } = require('react-dom/test-utils');
 
 const createStorage = require('../src/createStorage');
 
 const identity = value => value;
+
+const useRenderCounter = () => {
+    const ref = useRef(0);
+
+    // eslint-disable-next-line no-plusplus
+    ref.current++;
+
+    return ref.current;
+};
 
 describe('createStorage', () => {
     it.each([ 'Provider', 'Consumer', 'useStorage', 'useActionCreators' ])('should return %s', (field) => {
@@ -116,6 +125,7 @@ describe('createStorage', () => {
 
                 return { value1, value2: 0 };
             };
+
             const { Provider, useStorage } = createStorage(reducer);
             const Consumer = jest.fn(() => {
                 const [ , dispatch ] = useStorage(
@@ -140,6 +150,45 @@ describe('createStorage', () => {
             button.simulate('click');
 
             expect(Consumer).toHaveBeenCalledTimes(1);
+        });
+
+        it('should allow to update selector function', () => {
+            const initialValue = { value: 0 };
+            const reducer = () => ({ value: 1 });
+            const log = [];
+
+            const { Provider, useStorage } = createStorage(reducer);
+            const Consumer = () => {
+                const count = useRenderCounter();
+                const [ , dispatch ] = useStorage(
+                    ({ value }) => {
+                        log.push(count);
+
+                        return value;
+                    }
+                );
+                const onClick = () => dispatch({});
+
+                return (
+                    <button onClick={ onClick } />
+                );
+            };
+
+            const wrapper = mount(
+                <Provider state={ initialValue }>
+                    <Consumer />
+                </Provider>
+            );
+
+            expect(log).toEqual([ 1 ]);
+
+            wrapper.find('button').simulate('click');
+
+            expect(log).toEqual([ 1, 1, 2 ]);
+
+            wrapper.find('button').simulate('click');
+
+            expect(log).toEqual([ 1, 1, 2, 2 ]);
         });
     });
 

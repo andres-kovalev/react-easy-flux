@@ -76,6 +76,8 @@ module.exports = (reducer, middlewares = []) => {
         if (stored.selector !== selector || stored.state !== state) {
             Object.assign(stored, { state, selector, selected: selector(state) });
         }
+        Object.assign(stored, { equalityFunction });
+
         const check = () => {
             const newState = getState();
 
@@ -83,9 +85,9 @@ module.exports = (reducer, middlewares = []) => {
                 return;
             }
 
-            const newSelected = selector(newState);
+            const newSelected = stored.selector(newState);
 
-            if (equalityFunction(stored.selected, newSelected)) {
+            if (stored.equalityFunction(stored.selected, newSelected)) {
                 return;
             }
 
