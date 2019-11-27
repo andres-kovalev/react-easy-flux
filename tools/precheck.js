@@ -1,7 +1,10 @@
-const package = require('./../package.json');
+const packageJson = require('./../package.json');
 
 const { writeFile } = require('./common');
 
-package.dependencies = Object.assign(package.dependencies || {}, package.peerDependencies);
+packageJson.dependencies = Object.assign(
+    packageJson.dependencies || {},
+    packageJson.peerDependencies
+);
 
-writeFile('./package.json', JSON.stringify(package, null, 4));
+writeFile('./package.json', JSON.stringify(packageJson, null, 4));
