@@ -1,8 +1,9 @@
 const React = require('react');
 const PropTypes = require('prop-types');
 const EventEmitter = require('events');
+const hoistStatics = require('hoist-non-react-statics');
 
-const { strictEqual } = require('./equalityFunctions');
+const { strictEqual, shallowEqual } = require('./equalityFunctions');
 const { identity } = require('./helper');
 
 const { createContext, useContext, useReducer, useRef, useCallback, useMemo, useEffect } = React;
@@ -135,10 +136,32 @@ module.exports = (reducer, middlewares = []) => {
         return renderProp(selected, actions);
     };
 
+    const connect = (selector, actionCreators, equalityFunction = shallowEqual) => (Component) => {
+        const ConnectedComponent = (props) => {
+            const [ stateProps, dispatch ] = useStorage(selector, equalityFunction);
+            const actionProps = actionCreators
+                ? useActionCreators(actionCreators)
+                : { dispatch };
+
+            return (
+                <Component { ...props } { ...stateProps } { ...actionProps } />
+            );
+        };
+
+        hoistStatics(ConnectedComponent, Component);
+
+        ConnectedComponent.WrappedComponent = Component;
+        const componentName = Component.displayName || Component.name;
+        ConnectedComponent.displayName = componentName ? `connected(${ componentName })` : 'ConnectedComponent';
+
+        return ConnectedComponent;
+    };
+
     return {
         Provider,
         Consumer,
         useStorage,
-        useActionCreators
+        useActionCreators,
+        connect
     };
 };

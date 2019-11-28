@@ -443,7 +443,7 @@ describe('createStorage', () => {
             expect(renderFunction).toHaveBeenCalledTimes(1);
         });
 
-        it('should call children render prop with bound action creators bound to dispatch when provided', () => {
+        it('should call children render prop with action creators bound to dispatch when provided', () => {
             const reducer = jest.fn();
             const action = { type: 'ACTION_TYPE' };
             const invoke = () => action;
@@ -467,6 +467,149 @@ describe('createStorage', () => {
             });
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
+        });
+    });
+
+    describe('connect', () => {
+        it('should connect consumer component to storage', () => {
+            const state = { value: 'state-value' };
+            const Consumer = jest.fn(() => null);
+
+            const { Provider, connect } = createStorage(identity);
+            const ConnectedConsumer = connect()(Consumer);
+            mount(
+                <Provider state={ state }>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledWith({
+                ...state,
+                dispatch: expect.any(Function)
+            }, expect.anything());
+        });
+
+        it('should connect consumer component to part of storage value when selector provided', () => {
+            const value1 = 'value-1';
+            const value2 = 'value-2';
+            const selector = state => ({
+                value: state.value1
+            });
+            const Consumer = jest.fn(() => null);
+
+            const { Provider, connect } = createStorage(identity);
+            const ConnectedConsumer = connect(selector)(Consumer);
+            mount(
+                <Provider state={{ value1, value2 }}>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledWith({
+                value: value1,
+                dispatch: expect.any(Function)
+            }, expect.anything());
+        });
+
+        it('should connect consumer component with store dispatch() function', () => {
+            const reducer = jest.fn();
+            const action = { type: 'ACTION_TYPE' };
+            const Consumer = jest.fn(({ dispatch }) => (
+                <button onClick={ () => dispatch(action) } />
+            ));
+
+            const { Provider, connect } = createStorage(reducer);
+            const ConnectedConsumer = connect()(Consumer);
+            const wrapper = mount(
+                <Provider state={{ value: 0 }}>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledWith({
+                value: 0,
+                dispatch: expect.any(Function)
+            }, expect.anything());
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
+        });
+
+        it('shouldn\'t cause component re-render when state didn\'t changed', () => {
+            const Consumer = jest.fn(({ dispatch }) => (
+                <button onClick={ () => dispatch({}) } />
+            ));
+
+            const { Provider, connect } = createStorage(identity);
+            const ConnectedConsumer = connect()(Consumer);
+            const wrapper = mount(
+                <Provider state={{ value: 0 }}>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+        });
+
+        it('should connect consumer component with action creators bound to dispatch when provided', () => {
+            const reducer = jest.fn();
+            const action = { type: 'ACTION_TYPE' };
+            const invoke = () => action;
+            const Consumer = jest.fn(() => null);
+
+            const { Provider, connect } = createStorage(reducer);
+            const ConnectedConsumer = connect(undefined, { invoke })(Consumer);
+            mount(
+                <Provider state={{ value: 0 }}>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalled();
+
+            const [ firstCall ] = Consumer.mock.calls;
+            const [ props ] = firstCall;
+            act(() => {
+                props.invoke();
+            });
+
+            expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
+        });
+
+        it('should use equality function to check state changes when provided', () => {
+            let value1 = 0;
+            const reducer = () => {
+                // eslint-disable-next-line no-plusplus
+                value1++;
+
+                return { value1, value2: 0 };
+            };
+            const Consumer = jest.fn(({ dispatch }) => (
+                <button onClick={ () => dispatch({}) } />
+            ));
+            const equalityFunction = (oldState, newState) => oldState.value2 === newState.value2;
+
+            const { Provider, connect } = createStorage(reducer);
+            const ConnectedConsumer = connect(undefined, undefined, equalityFunction)(Consumer);
+            const wrapper = mount(
+                <Provider state={ reducer() }>
+                    <ConnectedConsumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
         });
     });
 
