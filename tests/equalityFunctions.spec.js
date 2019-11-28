@@ -19,6 +19,10 @@ describe('shallowEqual', () => {
         expect(shallowEqual(value, value)).toBe(true);
     });
 
+    it('should return false when one of values is falsy', () => {
+        expect(shallowEqual({})).toBe(false);
+    });
+
     describe('for objects', () => {
         it('should return true when both arguments have equal fields', () => {
             const field1 = {};
@@ -29,6 +33,10 @@ describe('shallowEqual', () => {
 
         it('should return false when arguments have not equal fields', () => {
             expect(shallowEqual({ field1: {} }, { field1: {} })).toBe(false);
+        });
+
+        it('should return false when arguments have different amount of items', () => {
+            expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
         });
     });
 
@@ -42,6 +50,10 @@ describe('shallowEqual', () => {
 
         it('should return false when arguments have not equal fields', () => {
             expect(shallowEqual([ {} ], [ {} ])).toBe(false);
+        });
+
+        it('should return false when arguments have different amount of items', () => {
+            expect(shallowEqual([ 1 ], [ 1, 2 ])).toBe(false);
         });
     });
 });
