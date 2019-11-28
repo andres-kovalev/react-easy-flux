@@ -38,13 +38,17 @@ npm i -S react
 const {
     Provider: ThemeProvider,
     useStorage: useTheme,
-    useActionCreators: useThemeActions
+    useActionCreators: useThemeActions,
+    Consumer: ThemeConsumer,
+    connect: withTheme
 } = createStorage(themeReducer);
 
 const {
     Provider: GlobalStateProvider,
     useStorage: useGlobalState,
-    useActionCreators: useGlobalActions
+    useActionCreators: useGlobalActions,
+    Consumer: GlobalStorageConsumer,
+    connect: withGlobalStorage
 } = createStorage(globalStateRedurec);
 ```
 
@@ -172,6 +176,90 @@ const [ onClick ] = useActionCreators([ onClick ]);
 // instead of
 
 const { invoke: onClick } = useActionCreators({ invoke });
+```
+
+## What about class components?
+
+Class components are not able to use hooks so we have two additional options:
+* `connect()` HoC (similar to [react-redux connect() HoC](https://react-redux.js.org/api/connect))
+* `Consumer` render prop
+
+### connect()
+
+`connect()` HoC consumes 3 arguments (all optional):
+* `selector` - function to select data from current storage state (similar to `useStorage()` hook 1st argument). Selector should return object, each field of this object becomes separate prop passed to wrapped component.
+* `actionCreatorsMap` - plain object where each value is an action creator function to bind. Each field of this object becomes separate prop passed to wrapped component. If not provided, `dispatch()` function will be added as `dispatch` prop.
+* `equalityFunction` - by default HoC uses `shallowEqual()` function to check selected state. It means component get updated when any field of selected object updated. Use this comparator to adjust update behaviour.
+
+Here is an example:
+
+```js
+import { connect } from './themeStorage';
+import { change } from './themeActions';
+
+class ThemeSelector extends React.Component {
+    render() {
+        const { items, current, change } = this.props;
+
+        return (
+            <Select
+                items={ items }
+                selected={ current }
+                onChange={ change }
+                />
+        );
+    }
+}
+
+export default connect(
+    ({ items, current }) => ({ items, current }),
+    { change },
+    (oldState, newState) => oldState.current === newState.current
+);
+```
+
+### Consumer
+
+`Consumer` component provides functionality similar to `connect()` HoC but implements different pattern - renderProp. It consumes 3 props:
+* `selector` - similar to `useStorage()` 1st argument.
+* `actionCreators` - action creators map/array similar to `useActionCreators()` 1st argument.
+* `equalityFunction` - similar to `useStorage()` 2nd argument.
+
+As a children renderProp function should be provided. This function will receive 2 arguments:
+* `state` - state (or selected part)
+* `actions` - map/array of bound action crearors (when `actionCreators` prop provided) or instance of `dispatch()` function (when no `actionCreators` prop propvided).
+
+Here is an example equivalent to example from `connect()` HoC description:
+
+```js
+import { Consumer } from './themeStorage';
+import { change } from './themeActions';
+
+const selector = ({ items, current }) => ({ items, current });
+const actionCreators = { change };
+const equalityFunction = (oldState, newState) => oldState.current === newState.current;
+
+class ThemeSelector extends React.Component {
+    renderThemeSelector = ({ items, current, change }) => (
+        <Select
+            items={ items }
+            selected={ current }
+            onChange={ change }
+            />
+    );
+
+    render() {
+        return (
+            <Consumer
+                selector={ selector }
+                actionCreators={ actionCreators }
+                equalityFunction={ equalityFunction }
+            >
+                { this.renderThemeSelector }
+            </Consumer>
+        )
+    }
+}
 ```
 
 ## Middlewares
