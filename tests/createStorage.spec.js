@@ -17,6 +17,34 @@ const useRenderCounter = () => {
     return ref.current;
 };
 
+const noop = () => {};
+function createReducer(reduce = noop) {
+    const waits = [];
+    const dispatches = [];
+
+    const reducer = jest.fn((state, action) => {
+        if (waits.length) {
+            waits.shift()();
+        } else {
+            dispatches.push(Promise.resolve());
+        }
+
+        return reduce(state, action);
+    });
+
+    const waitForDispatch = () => {
+        if (dispatches.length) {
+            return dispatches.shift();
+        }
+
+        return new Promise(
+            resolve => waits.push(resolve)
+        );
+    };
+
+    return [ reducer, waitForDispatch ];
+}
+
 describe('createStorage', () => {
     it.each([ 'Provider', 'Consumer', 'useStorage', 'useActionCreators' ])('should return %s', (field) => {
         const result = createStorage(identity);
@@ -70,8 +98,8 @@ describe('createStorage', () => {
             expect(div.text()).toBe(value1);
         });
 
-        it('should return storage dispatch() function', () => {
-            const reducer = jest.fn();
+        it('should return storage dispatch() function', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const { Provider, useStorage } = createStorage(reducer);
             const Consumer = () => {
@@ -90,12 +118,14 @@ describe('createStorage', () => {
             );
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
-        it('shouldn\'t cause component re-render when state didn\'t changed', () => {
-            const { Provider, useStorage } = createStorage(identity);
+        it('shouldn\'t cause component re-render when state didn\'t changed', async () => {
+            const [ reducer, waitForDispatch ] = createReducer(identity);
+            const { Provider, useStorage } = createStorage(reducer);
             const Consumer = jest.fn(() => {
                 const [ , dispatch ] = useStorage();
                 const onClick = () => dispatch({});
@@ -114,17 +144,18 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(Consumer).toHaveBeenCalledTimes(1);
         });
 
-        it('should use equality function to check state changes when provided', () => {
+        it('should use equality function to check state changes when provided', async () => {
             let value1 = 0;
-            const reducer = () => {
+            const [ reducer, waitForDispatch ] = createReducer(() => {
                 value1 += 1;
 
                 return { value1, value2: 0 };
-            };
+            });
 
             const { Provider, useStorage } = createStorage(reducer);
             const Consumer = jest.fn(() => {
@@ -148,13 +179,14 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(Consumer).toHaveBeenCalledTimes(1);
         });
 
-        it('should allow to update selector function', () => {
+        it('should allow to update selector function', async () => {
             const initialValue = { value: 0 };
-            const reducer = () => ({ value: 1 });
+            const [ reducer, waitForDispatch ] = createReducer(() => ({ value: 1 }));
             const log = [];
 
             const { Provider, useStorage } = createStorage(reducer);
@@ -183,18 +215,20 @@ describe('createStorage', () => {
             expect(log).toEqual([ 1 ]);
 
             wrapper.find('button').simulate('click');
+            await waitForDispatch();
 
             expect(log).toEqual([ 1, 1, 2 ]);
 
             wrapper.find('button').simulate('click');
+            await waitForDispatch();
 
             expect(log).toEqual([ 1, 1, 2, 2 ]);
         });
     });
 
     describe('useActionCreators()', () => {
-        it('should return action creators map bound to dispatch', () => {
-            const reducer = jest.fn();
+        it('should return action creators map bound to dispatch', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const invoke = () => action;
 
@@ -213,12 +247,13 @@ describe('createStorage', () => {
             );
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
-        it('should return array of action creators bound to dispatch when array provided', () => {
-            const reducer = jest.fn();
+        it('should return array of action creators bound to dispatch when array provided', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const invoke = () => action;
 
@@ -237,6 +272,7 @@ describe('createStorage', () => {
             );
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
@@ -260,17 +296,17 @@ describe('createStorage', () => {
             expect(div).toHaveLength(1);
         });
 
-        it('shouldn\'t cause component re-render when storage updated', () => {
+        it('shouldn\'t cause component re-render when storage updated', async () => {
             let state = 0;
-            const reducer = () => {
+            const [ reducer, waitForDispatch ] = createReducer(() => {
                 state += 1;
 
                 return state;
-            };
+            });
 
             const { Provider, useActionCreators } = createStorage(reducer);
             const Consumer = jest.fn(() => {
-                const { update } = useActionCreators({ update: () => {} });
+                const { update } = useActionCreators({ update: noop });
 
                 return (
                     <button onClick={ update } />
@@ -286,6 +322,7 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(Consumer).toHaveBeenCalledTimes(1);
         });
@@ -293,8 +330,8 @@ describe('createStorage', () => {
         it('should memoize bound action creators', () => {
             const { Provider, useActionCreators } = createStorage(identity);
             const ACTIONS = {
-                action1: () => {},
-                action2: () => {}
+                action1: noop,
+                action2: noop
             };
 
             const Child = () => <React.Fragment />;
@@ -357,8 +394,8 @@ describe('createStorage', () => {
             expect(renderFunction).toHaveBeenCalledWith(value1, expect.anything());
         });
 
-        it('should call children render prop with store dispatch() function', () => {
-            const reducer = jest.fn();
+        it('should call children render prop with store dispatch() function', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
 
             const { Provider, Consumer } = createStorage(reducer);
@@ -380,11 +417,12 @@ describe('createStorage', () => {
             );
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
-        it('shouldn\'t cause component re-render when state didn\'t changed', () => {
+        it('shouldn\'t cause component re-render when state didn\'t changed', async () => {
             const renderFunction = jest.fn((value, dispatch) => {
                 const onClick = () => dispatch({});
 
@@ -393,7 +431,8 @@ describe('createStorage', () => {
                 );
             });
 
-            const { Provider, Consumer } = createStorage(identity);
+            const [ reducer, waitForDispatch ] = createReducer(identity);
+            const { Provider, Consumer } = createStorage(reducer);
             const wrapper = mount(
                 <Provider state={ 0 }>
                     <Consumer>
@@ -406,17 +445,18 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(renderFunction).toHaveBeenCalledTimes(1);
         });
 
-        it('should use equality function to check state changes when provided', () => {
+        it('should use equality function to check state changes when provided', async () => {
             let value1 = 0;
-            const reducer = () => {
+            const [ reducer, waitForDispatch ] = createReducer(() => {
                 value1 += 1;
 
                 return { value1, value2: 0 };
-            };
+            });
             const renderFunction = jest.fn((value, dispatch) => {
                 const onClick = () => dispatch({});
 
@@ -439,12 +479,13 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(renderFunction).toHaveBeenCalledTimes(1);
         });
 
-        it('should call children render prop with action creators bound to dispatch when provided', () => {
-            const reducer = jest.fn();
+        it('should call children render prop with action creators bound to dispatch when provided', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const invoke = () => action;
             const renderFunction = jest.fn(() => null);
@@ -465,6 +506,7 @@ describe('createStorage', () => {
             act(() => {
                 actionCreatorsMap.invoke();
             });
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
@@ -511,8 +553,8 @@ describe('createStorage', () => {
             }, expect.anything());
         });
 
-        it('should connect consumer component with store dispatch() function', () => {
-            const reducer = jest.fn();
+        it('should connect consumer component with store dispatch() function', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const Consumer = jest.fn(({ dispatch }) => (
                 <button onClick={ () => dispatch(action) } />
@@ -533,16 +575,18 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
-        it('shouldn\'t cause component re-render when state didn\'t changed', () => {
+        it('shouldn\'t cause component re-render when state didn\'t changed', async () => {
             const Consumer = jest.fn(({ dispatch }) => (
                 <button onClick={ () => dispatch({}) } />
             ));
 
-            const { Provider, connect } = createStorage(identity);
+            const [ reducer, waitForDispatch ] = createReducer(identity);
+            const { Provider, connect } = createStorage(reducer);
             const ConnectedConsumer = connect()(Consumer);
             const wrapper = mount(
                 <Provider state={{ value: 0 }}>
@@ -554,12 +598,13 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(Consumer).toHaveBeenCalledTimes(1);
         });
 
-        it('should connect consumer component with action creators bound to dispatch when provided', () => {
-            const reducer = jest.fn();
+        it('should connect consumer component with action creators bound to dispatch when provided', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const action = { type: 'ACTION_TYPE' };
             const invoke = () => action;
             const Consumer = jest.fn(() => null);
@@ -579,18 +624,19 @@ describe('createStorage', () => {
             act(() => {
                 props.invoke();
             });
+            await waitForDispatch();
 
             expect(reducer).toHaveBeenCalledWith(expect.anything(), action);
         });
 
-        it('should use equality function to check state changes when provided', () => {
+        it('should use equality function to check state changes when provided', async () => {
             let value1 = 0;
-            const reducer = () => {
+            const [ reducer, waitForDispatch ] = createReducer(() => {
                 // eslint-disable-next-line no-plusplus
                 value1++;
 
                 return { value1, value2: 0 };
-            };
+            });
             const Consumer = jest.fn(({ dispatch }) => (
                 <button onClick={ () => dispatch({}) } />
             ));
@@ -608,14 +654,15 @@ describe('createStorage', () => {
 
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(Consumer).toHaveBeenCalledTimes(1);
         });
     });
 
     describe('dispatch()', () => {
-        it('should run middlewares when provided', () => {
-            const reducer = jest.fn();
+        it('should run middlewares when provided', async () => {
+            const [ reducer, waitForDispatch ] = createReducer();
             const exampleAction = { type: 'ACTION_TYPE' };
             const middlewareSpy = jest.fn();
             const middleware = () => next => (action) => {
@@ -640,8 +687,41 @@ describe('createStorage', () => {
             );
             const button = wrapper.find('button');
             button.simulate('click');
+            await waitForDispatch();
 
             expect(middlewareSpy).toHaveBeenCalledWith(exampleAction);
+        });
+
+        it('should be asynchronous (cause single update for two subsequent actions)', async () => {
+            const [ reducer, waitForDispatch ] = createReducer(
+                value => value + 1
+            );
+
+            const { Provider, useStorage } = createStorage(reducer);
+            const Consumer = jest.fn(() => {
+                const [ , dispatch ] = useStorage();
+                const onClick = () => Promise.resolve().then(() => {
+                    dispatch({});
+                    dispatch({});
+                });
+
+                return (
+                    <button onClick={ onClick } />
+                );
+            });
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+            await waitForDispatch();
+
+            expect(Consumer).toHaveBeenCalledTimes(2);
         });
     });
 });

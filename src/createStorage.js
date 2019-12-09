@@ -51,15 +51,30 @@ module.exports = (reducer, middlewares = []) => {
         }, [ events ]);
 
         const store = useMemo(() => {
-            const dispatchMiddleware = (action) => {
+            const actions = [];
+            const dispatchActions = () => {
+                if (!actions.length) {
+                    return;
+                }
+
                 const oldState = getState();
-                const newState = reducer(oldState, action);
+                const newState = actions.reduce(
+                    (reduced, action) => reducer(reduced, action),
+                    oldState
+                );
+                actions.length = 0;
 
                 if (newState !== oldState) {
                     state.current = newState;
 
                     events.emit('change');
                 }
+            };
+            const scheduleActions = () => Promise.resolve().then(dispatchActions);
+            const dispatchMiddleware = (action) => {
+                actions.push(action);
+
+                scheduleActions();
             };
             let dispatch;
 
