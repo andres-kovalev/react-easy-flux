@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/andres-kovalev/react-easy-flux/compare/1.5.0...1.6.0) (2019-12-09)
+
+
+### Bug Fixes
+
+* improved shallowEqual() to work with falsy values ([3d176c4](https://github.com/andres-kovalev/react-easy-flux/commit/3d176c4))
+* selector update behaviour ([fd0fd1f](https://github.com/andres-kovalev/react-easy-flux/commit/fd0fd1f))
+
+
+### Features
+
+* add array support for `useActionCreators()` hook ([0dd01da](https://github.com/andres-kovalev/react-easy-flux/commit/0dd01da))
+* implement `connect()` HoC ([5b95486](https://github.com/andres-kovalev/react-easy-flux/commit/5b95486))
+
+
+### Improvements
+
+* improved dispatch() to reduce storage asynchronously ([f462a87](https://github.com/andres-kovalev/react-easy-flux/commit/f462a87))
+
 ## 1.5.0 (2019-08-21)
 
 ### Features
