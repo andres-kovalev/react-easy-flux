@@ -691,5 +691,37 @@ describe('createStorage', () => {
 
             expect(middlewareSpy).toHaveBeenCalledWith(exampleAction);
         });
+
+        it('should be asynchronous (cause single update for two subsequent actions)', async () => {
+            const [ reducer, waitForDispatch ] = createReducer(
+                value => value + 1
+            );
+
+            const { Provider, useStorage } = createStorage(reducer);
+            const Consumer = jest.fn(() => {
+                const [ , dispatch ] = useStorage();
+                const onClick = () => Promise.resolve().then(() => {
+                    dispatch({});
+                    dispatch({});
+                });
+
+                return (
+                    <button onClick={ onClick } />
+                );
+            });
+            const wrapper = mount(
+                <Provider state={ 0 }>
+                    <Consumer />
+                </Provider>
+            );
+
+            expect(Consumer).toHaveBeenCalledTimes(1);
+
+            const button = wrapper.find('button');
+            button.simulate('click');
+            await waitForDispatch();
+
+            expect(Consumer).toHaveBeenCalledTimes(2);
+        });
     });
 });
